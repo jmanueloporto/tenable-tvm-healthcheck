@@ -1,0 +1,19 @@
+from core.connection import TenableConnection
+
+def test_connection():
+    print("--- Verificando Conexión para Health Check ---")
+    try:
+        # Instanciamos la conexión centralizada desde el paquete 'core'
+        api_manager = TenableConnection()
+        tio = api_manager.get_client()
+        
+        # Actividad de validación: listar scanners disponibles [cite: 47]
+        scanners = tio.scanners.list()
+        print(f"ESTADO: Conexión Exitosa.")
+        print(f"RECURSOS: {len(scanners)} scanners detectados para evaluación.")
+        
+    except Exception as e:
+        print(f"ERROR: No se pudo establecer la conexión. Detalles: {e}")
+
+if __name__ == "__main__":
+    test_connection()

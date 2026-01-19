@@ -1,0 +1,5 @@
+tenable/
+__pycache__/
+.env
+*.log
+reports/
