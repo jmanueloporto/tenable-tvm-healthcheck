@@ -6,67 +6,45 @@ from modules.assets import AssetHealthModule
 from modules.scans import ScanHealthModule
 from reports.generator import ReportGenerator
 
-def run_complete_health_check():
-    print("\n" + "="*50)
-    print("      TENABLE AUTOMATED HEALTH CHECK TOOL")
-    print("="*50)
+def run_health_check_v2():
+    print("\n" + "="*60)
+    print("      TENABLE HEALTH CHECK - VERSION DE CONSULTORIA")
+    print("="*60)
     
     try:
         # 1. Conexion
-        print("[*] Estableciendo conexion con Tenable VM...")
         api_manager = TenableConnection()
         tio = api_manager.get_client()
 
         # 2. Diagnosticos
-        print("[*] Analizando infraestructura de scanners...")
+        print("[*] Iniciando recoleccion de telemetria...")
         s_results = ScannerHealthModule(tio).run_assessment()
-
-        print("[*] Analizando inventario de activos...")
-        a_results = AssetHealthModule(tio).run_hygiene_check(stale_days=90)
-
-        print("[*] Analizando calidad y visibilidad de escaneos...")
+        a_results = AssetHealthModule(tio).run_hygiene_check()
         scan_results = ScanHealthModule(tio).audit_credentials_health()
 
-        # 3. Evaluacion Estrategica
-        print("[*] Procesando hallazgos y recomendaciones...")
+        # 3. Evaluacion Integral
+        print("[*] Clasificando hallazgos por estado y categoria...")
         evaluator = HealthCheckEvaluator()
-        
-        infra_advices = evaluator.analyze_infrastructure(s_results)
-        license_advices = evaluator.analyze_licensing(a_results)
-        scan_advices = evaluator.analyze_scans(scan_results)
+        final_assessment = evaluator.analyze_all(s_results, a_results, scan_results)
 
-        all_advices = infra_advices + license_advices + scan_advices
-
-        # 4. Generacion de Reportes
-        print("[*] Generando entregables finales...")
-        full_data = {
-            "infrastructure": s_results,
-            "inventory": a_results,
-            "scans": scan_results,
-            "recommendations": all_advices
-        }
-        
+        # 4. Generacion de Entregables
         reporter = ReportGenerator()
-        reporter.save_json_report(full_data)
-        reporter.save_txt_summary(all_advices)
+        reporter.save_json_report({"results": final_assessment})
+        reporter.save_txt_summary(final_assessment)
 
-        # 5. Salida por Consola
-        print("\n" + "!"*10 + " RECOMENDACIONES DE CONSULTORIA " + "!"*10)
-        
-        if not all_advices:
-            print("[+] Salud de la plataforma optima.")
-        else:
-            for advice in all_advices:
-                print(f"[{advice['severity']}] {advice['finding']}")
-                print(f" -> SUGERENCIA: {advice['recommendation']}\n")
+        # 5. Resumen Visual
+        print("\nRESUMEN DE ESTADOS:")
+        for item in final_assessment:
+            status_tag = f"[{item['status']}]"
+            print(f" {status_tag:<15} | {item['category']}: {item['check']}")
 
-        print("="*50)
-        print("PROCESO FINALIZADO EXITOSAMENTE")
-        print("="*50 + "\n")
+        print("\n" + "="*60)
+        print("EL REPORTE HA SIDO GENERADO CON EXITO")
+        print("="*60 + "\n")
 
     except Exception as e:
-        print(f"\n[!] ERROR CRITICO: {e}")
+        print(f"\n[!] ERROR EN EL PROCESO: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
-    run_complete_health_check()
+    run_health_check_v2()
