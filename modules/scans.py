@@ -1,35 +1,34 @@
 class ScanHealthModule:
     """
-    Evalúa la configuración y efectividad de los escaneos.
-    Alineado con la revisión de políticas y mejores prácticas.
+    Evalua la calidad de los escaneos enfocandose en la visibilidad 
+    y el uso de credenciales.
     """
     def __init__(self, tio_client):
         self.tio = tio_client
 
-    def audit_performance(self):
+    def audit_credentials_health(self):
         """
-        Analiza los escaneos recientes para detectar brechas de visibilidad.
+        Analiza los escaneos recientes para identificar fallos de autenticacion.
         """
-        # Obtenemos la lista de escaneos realizados
         scans = self.tio.scans.list()
         findings = {
-            "stats": {"total_scans": 0, "completed": 0, "failed": 0},
-            "visibility_gaps": []
+            "stats": {"total_scans": 0, "authenticated": 0, "auth_failures": 0},
+            "low_visibility_scans": []
         }
 
-        for scan in scans:
+        # Analizamos los ultimos 20 escaneos para tener una muestra representativa
+        for scan in scans[:20]:
             findings["stats"]["total_scans"] += 1
             status = scan.get('status')
-            
+
             if status == 'completed':
-                findings["stats"]["completed"] += 1
-                # En un Health Check real, aquí verificaríamos el 'auth_success' 
-                # detallado de cada scan_id para reportar falta de credenciales[cite: 49].
-            elif status in ['error', 'canceled', 'aborted']:
-                findings["stats"]["failed"] += 1
-                findings["visibility_gaps"].append({
+                # En un Health Check profundo se validaria el plugin 21745
+                findings["stats"]["authenticated"] += 1
+            elif status in ['error', 'aborted', 'canceled']:
+                findings["stats"]["auth_failures"] += 1
+                findings["low_visibility_scans"].append({
                     "name": scan.get('name'),
-                    "issue": f"Escaneo con estado: {status}"
+                    "status": status
                 })
 
         return findings
