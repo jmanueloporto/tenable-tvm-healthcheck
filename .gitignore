@@ -3,3 +3,7 @@ __pycache__/
 .env
 *.log
 reports/
+.env
+tenable/
+reports/
+__pycache__/

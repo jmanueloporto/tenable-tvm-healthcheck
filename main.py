@@ -4,6 +4,7 @@ from core.evaluator import HealthCheckEvaluator
 from modules.scanners import ScannerHealthModule
 from modules.assets import AssetHealthModule
 from modules.scans import ScanHealthModule
+from modules.governance import GovernanceModule # Importacion nueva
 from reports.generator import ReportGenerator
 
 def run_health_check_v2():
@@ -17,15 +18,20 @@ def run_health_check_v2():
         tio = api_manager.get_client()
 
         # 2. Diagnosticos
-        print("[*] Iniciando recoleccion de telemetria...")
+        print("[*] Recolectando telemetria de Infraestructura y Activos...")
         s_results = ScannerHealthModule(tio).run_assessment()
         a_results = AssetHealthModule(tio).run_hygiene_check()
+        
+        print("[*] Analizando calidad de escaneos...")
         scan_results = ScanHealthModule(tio).audit_credentials_health()
+        
+        print("[*] Auditando usuarios y roles (RBAC)...")
+        u_results = GovernanceModule(tio).get_user_roles_stats()
 
         # 3. Evaluacion Integral
-        print("[*] Clasificando hallazgos por estado y categoria...")
+        print("[*] Procesando informe consolidado...")
         evaluator = HealthCheckEvaluator()
-        final_assessment = evaluator.analyze_all(s_results, a_results, scan_results)
+        final_assessment = evaluator.analyze_all(s_results, a_results, scan_results, u_results)
 
         # 4. Generacion de Entregables
         reporter = ReportGenerator()
