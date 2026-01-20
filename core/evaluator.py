@@ -1,38 +1,44 @@
 class HealthCheckEvaluator:
     """
-    Motor que compara datos técnicos contra las recomendaciones 
-    de Tenable detalladas en el Services Brief.
+    Motor de logica para transformar hallazgos tecnicos en 
+    recomendaciones estrategicas de consultoria.
     """
+    
     def __init__(self):
-        # Umbrales basados en mejores prácticas de consultoría
-        self.thresholds = {
-            "max_offline_scanners_pct": 10,
-            "max_stale_assets_pct": 15
-        }
+        # Definimos los umbrales de mejores practicas segun Tenable
+        self.STALE_THRESHOLD = 90  # dias para considerar un activo inactivo
 
-    def evaluate_infrastructure(self, scanner_stats):
-        """Evalúa si la infraestructura es resiliente[cite: 23]."""
-        total = scanner_stats['total']
-        offline = scanner_stats['offline']
-        
-        if total == 0:
-            return "Crítico: No se detectaron scanners en el entorno."
+    def analyze_infrastructure(self, scanner_data):
+        """Genera recomendaciones basadas en el estado de los scanners."""
+        recommendations = []
+        stats = scanner_data.get('stats', {})
 
-        offline_pct = (offline / total) * 100
-        if offline_pct > self.thresholds["max_offline_scanners_pct"]:
-            return f"Alerta: {offline_pct:.1f}% de scanners offline. Riesgo de resiliencia[cite: 23]."
-        
-        return "Infraestructura saludable y resiliente."
+        if stats.get('offline', 0) > 0:
+            recommendations.append({
+                "severity": "CRITICAL",
+                "finding": f"Existen {stats['offline']} scanners fuera de linea.",
+                "recommendation": "Restablecer la conectividad de los sensores para garantizar la cobertura de escaneo y evitar puntos ciegos."
+            })
 
-    def evaluate_assets(self, asset_stats):
-        """Evalúa la higiene y optimización del almacenamiento."""
-        total = asset_stats['total_assets']
-        stale = asset_stats['stale_assets']
-        
-        if total == 0: return "Sin activos detectados."
+        if stats.get('outdated', 0) > 0:
+            recommendations.append({
+                "severity": "MEDIUM",
+                "finding": f"{stats['outdated']} scanners requieren actualizacion.",
+                "recommendation": "Actualizar el software de Nessus para acceder a las ultimas capacidades de deteccion y correcciones."
+            })
+            
+        return recommendations
 
-        stale_pct = (stale / total) * 100
-        if stale_pct > self.thresholds["max_stale_assets_pct"]:
-            return f"Recomendación: {stale_pct:.1f}% de activos stale. Realizar purga para optimizar licenciamiento."
-        
-        return "Higiene de activos dentro de parámetros óptimos."
+    def analyze_licensing(self, asset_data):
+        """Genera recomendaciones basadas en la higiene de activos."""
+        recommendations = []
+        stale_count = asset_data.get('stats', {}).get('stale_assets', 0)
+
+        if stale_count > 0:
+            recommendations.append({
+                "severity": "LOW",
+                "finding": f"Se detectaron {stale_count} activos inactivos por mas de {self.STALE_THRESHOLD} dias.",
+                "recommendation": "Implementar reglas de purga automatica para liberar licencias y mejorar el rendimiento."
+            })
+            
+        return recommendations
