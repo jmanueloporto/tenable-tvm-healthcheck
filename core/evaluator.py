@@ -1,58 +1,72 @@
+"""
+Core Evaluator Module
+Version: 1.5
+Description: Motor de reglas y calificacion de hallazgos.
+"""
+
 class HealthCheckEvaluator:
     def __init__(self):
+        self.version = "1.5"
         self.STALE_THRESHOLD = 90
 
-    def analyze_all(self, s_results, a_results, scan_results, u_results):
+    def analyze_all(self, s_results, a_results, scan_results, u_results, r_results):
         report_data = []
 
-        # --- INFRAESTRUCTURA ---
+        # 1. INFRAESTRUCTURA
         s_stats = s_results.get('stats', {})
-        offline = s_stats.get('offline', 0)
         report_data.append({
             "category": "INFRAESTRUCTURA",
             "check": "Disponibilidad de Scanners",
-            "status": "OPTIMAL" if offline == 0 else "CRITICAL",
-            "details": f"Total: {s_stats.get('total', 0)}, Offline: {offline}.",
-            "recommendation": "Restablecer conectividad de sensores." if offline > 0 else "OK."
+            "status": "OPTIMAL" if s_stats.get('offline', 0) == 0 else "CRITICAL",
+            "details": f"Total: {s_stats.get('total', 0)}, Offline: {s_stats.get('offline', 0)}.",
+            "recommendation": "Restablecer conectividad de sensores."
         })
 
-        # --- GOBERNANZA: RBAC ---
+        # 2. GOBERNANZA
         gov_stats = u_results.get('breakdown', {})
-        total_u = u_results.get('total_users', 0)
         admins = gov_stats.get('Administrator', 0)
-        
-        # Alerta si mas del 10% de los usuarios son administradores
-        rbac_status = "CRITICAL" if admins > 3 else "OPTIMAL"
-        
-        breakdown_str = ", ".join([f"{k}: {v}" for k, v in gov_stats.items()])
-        
         report_data.append({
             "category": "GOBERNANZA",
             "check": "Distribucion de Roles (RBAC)",
-            "status": rbac_status,
-            "details": f"Total: {total_u}. Desglose: {breakdown_str}",
-            "recommendation": f"Se detectaron {admins} Administradores. Reducir privilegios para cumplir con el principio de menor privilegio." if rbac_status == "CRITICAL" else "Distribucion adecuada."
+            "status": "CRITICAL" if admins > 3 else "OPTIMAL",
+            "details": f"Total Usuarios: {u_results.get('total_users')}. Admins: {admins}.",
+            "recommendation": "Reducir administradores (Principio de Menor Privilegio)."
         })
 
-        # --- LICENCIAMIENTO ---
+        # 3. REMEDIACION (Novedad v1.5)
+        avg_days = r_results.get('avg_days_open', 0)
+        overdue_c = r_results.get('overdue_criticals', 0)
+        exploits = r_results.get('exploitable_total', 0)
+        status_rem = "OPTIMAL"
+        if avg_days > 30 or overdue_c > 0 or exploits > 0: status_rem = "WARNING"
+        if avg_days > 60 or overdue_c > 10 or exploits > 5: status_rem = "CRITICAL"
+        
+        report_data.append({
+            "category": "REMEDIACION",
+            "check": "Eficacia de Parcheo y Analisis de Exploit",
+            "status": status_rem,
+            "details": f"Promedio dias: {avg_days}. Criticas vencidas: {overdue_c}. Con Exploit: {exploits}.",
+            "recommendation": "Priorizar vulnerabilidades con exploit activo y cerrar criticas fuera de SLA."
+        })
+
+        # 4. LICENCIAMIENTO
         stale = a_results.get('stats', {}).get('stale_assets', 0)
         report_data.append({
             "category": "LICENCIAMIENTO",
-            "check": "Higiene de Activos",
+            "check": "Higiene de Activos (Stale)",
             "status": "OPTIMAL" if stale == 0 else "WARNING",
-            "details": f"Stale assets: {stale}.",
-            "recommendation": "Configurar purga automatica." if stale > 0 else "OK."
+            "details": f"Activos sin escaneo > 90 dias: {stale}.",
+            "recommendation": "Configurar reglas de purga automatica."
         })
 
-        # --- VISIBILIDAD ---
-        sc_stats = scan_results.get('stats', {})
-        failures = sc_stats.get('auth_failures', 0)
+        # 5. VISIBILIDAD
+        failures = scan_results.get('stats', {}).get('auth_failures', 0)
         report_data.append({
             "category": "VISIBILIDAD",
             "check": "Calidad de Escaneo",
             "status": "OPTIMAL" if failures == 0 else "WARNING",
-            "details": f"Errores de visibilidad: {failures}.",
-            "recommendation": "Validar credenciales de escaneo." if failures > 0 else "OK."
+            "details": f"Fallos de autenticacion: {failures}.",
+            "recommendation": "Validar credenciales de escaneo en los activos afectados."
         })
 
         return report_data
