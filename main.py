@@ -1,7 +1,7 @@
 """
 Tenable TVM Health Check Suite
-Version: 1.6
-Description: Orquestador principal con Priorización de Riesgo Predictivo.
+Version: 1.6.1
+Description: Orquestador con Hotfix para RiskModule (vpr_score sorting).
 """
 
 import sys
@@ -15,7 +15,7 @@ from modules.remediation import RemediationModule
 from modules.risk import RiskModule
 from reports.generator import ReportGenerator
 
-__version__ = "1.6"
+__version__ = "1.6.1"
 
 def run_health_check():
     print("\n" + "="*75)
@@ -26,7 +26,7 @@ def run_health_check():
         api_manager = TenableConnection()
         tio = api_manager.get_client()
 
-        print(f"[*] Iniciando Auditoria de Riesgo v{__version__}...")
+        print(f"[*] Iniciando Auditoria v{__version__}...")
 
         print("[*] 1/6 Analizando Infraestructura de Scanners...")
         s_results = ScannerHealthModule(tio).run_assessment()

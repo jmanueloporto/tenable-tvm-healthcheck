@@ -1,12 +1,12 @@
 """
 Core Evaluator Module
-Version: 1.6
-Description: Motor de reglas y calificacion de hallazgos incluyendo analisis de VPR.
+Version: 1.6.1
+Description: Motor de reglas incluyendo analisis de VPR con manejo de errores mejorado.
 """
 
 class HealthCheckEvaluator:
     def __init__(self):
-        self.version = "1.6"
+        self.version = "1.6.1"
         self.STALE_THRESHOLD = 90
 
     def analyze_all(self, s_results, a_results, scan_results, u_results, r_results, risk_results):
@@ -49,18 +49,26 @@ class HealthCheckEvaluator:
             "recommendation": "Priorizar vulnerabilidades con exploit activo."
         })
 
-        # 4. PRIORIZACION (Novedad v1.6)
-        max_vpr = max([a['vpr'] for a in risk_results]) if risk_results else 0
-        status_risk = "OPTIMAL"
-        if max_vpr >= 7.0: status_risk = "WARNING"
-        if max_vpr >= 9.0: status_risk = "CRITICAL"
+        # 4. PRIORIZACION (V1.6.1)
+        # Verificamos si tenemos resultados reales para evitar falsos OPTIMAL
+        if not risk_results:
+            status_risk = "WARNING"
+            details_risk = "No se pudo calcular el riesgo (revisar logs)."
+            rec_risk = "Verificar conectividad con la API de Assets."
+        else:
+            max_vpr = risk_results[0]['vpr']
+            status_risk = "OPTIMAL"
+            if max_vpr >= 7.0: status_risk = "WARNING"
+            if max_vpr >= 9.0: status_risk = "CRITICAL"
+            details_risk = f"Puntaje VPR maximo: {max_vpr}."
+            rec_risk = f"Enfocar recursos en {risk_results[0]['name']}." if status_risk != "OPTIMAL" else "OK."
 
         report_data.append({
             "category": "PRIORIZACION",
             "check": "Activos de Alto Riesgo (VPR)",
             "status": status_risk,
-            "details": f"Puntaje VPR maximo: {max_vpr} en el Top 10.",
-            "recommendation": f"Enfocar recursos en el activo {risk_results[0]['name']} por alto riesgo de explotacion." if risk_results else "OK."
+            "details": details_risk,
+            "recommendation": rec_risk
         })
 
         # 5. LICENCIAMIENTO
