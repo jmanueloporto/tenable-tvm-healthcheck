@@ -1,7 +1,7 @@
 """
 Tenable TVM Health Check Suite
-Version: 1.5
-Description: Orquestador principal - Full Consulting Suite.
+Version: 1.6
+Description: Orquestador principal con Priorización de Riesgo Predictivo.
 """
 
 import sys
@@ -12,9 +12,10 @@ from modules.assets import AssetHealthModule
 from modules.scans import ScanHealthModule
 from modules.governance import GovernanceModule
 from modules.remediation import RemediationModule
+from modules.risk import RiskModule
 from reports.generator import ReportGenerator
 
-__version__ = "1.5"
+__version__ = "1.6"
 
 def run_health_check():
     print("\n" + "="*75)
@@ -22,33 +23,34 @@ def run_health_check():
     print("="*75)
     
     try:
-        # Inicializar Conexión
         api_manager = TenableConnection()
         tio = api_manager.get_client()
 
-        print(f"[*] Iniciando Auditoria v{__version__}...")
+        print(f"[*] Iniciando Auditoria de Riesgo v{__version__}...")
 
-        # Ejecución de Módulos
-        print("[*] 1/5 Analizando Infraestructura de Scanners...")
+        print("[*] 1/6 Analizando Infraestructura de Scanners...")
         s_results = ScannerHealthModule(tio).run_assessment()
         
-        print("[*] 2/5 Analizando Higiene de Activos y Licencias...")
+        print("[*] 2/6 Analizando Higiene de Activos...")
         a_results = AssetHealthModule(tio).run_hygiene_check()
         
-        print("[*] 3/5 Auditando Calidad de Escaneo (Visibilidad)...")
+        print("[*] 3/6 Auditando Calidad de Escaneo...")
         scan_results = ScanHealthModule(tio).audit_credentials_health()
         
-        print("[*] 4/5 Evaluando Gobernanza (Usuarios y Roles)...")
+        print("[*] 4/6 Evaluando Gobernanza (RBAC)...")
         u_results = GovernanceModule(tio).get_user_roles_stats()
 
-        print("[*] 5/5 Calculando SLA de Remediacion y Riesgo de Exploits...")
+        print("[*] 5/6 Calculando SLA de Remediacion...")
         r_results = RemediationModule(tio).calculate_sla_performance()
+
+        print("[*] 6/6 Identificando Activos Criticos (Inteligencia VPR)...")
+        risk_results = RiskModule(tio).get_top_risk_assets()
 
         # Evaluación Integral
         evaluator = HealthCheckEvaluator()
-        final_assessment = evaluator.analyze_all(s_results, a_results, scan_results, u_results, r_results)
+        final_assessment = evaluator.analyze_all(s_results, a_results, scan_results, u_results, r_results, risk_results)
 
-        # Generación de Reportes
+        # Reportes
         reporter = ReportGenerator()
         reporter.save_json_report({"results": final_assessment, "version": __version__})
         reporter.save_txt_summary(final_assessment)

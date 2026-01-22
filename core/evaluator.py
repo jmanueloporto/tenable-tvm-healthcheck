@@ -1,15 +1,15 @@
 """
 Core Evaluator Module
-Version: 1.5
-Description: Motor de reglas y calificacion de hallazgos.
+Version: 1.6
+Description: Motor de reglas y calificacion de hallazgos incluyendo analisis de VPR.
 """
 
 class HealthCheckEvaluator:
     def __init__(self):
-        self.version = "1.5"
+        self.version = "1.6"
         self.STALE_THRESHOLD = 90
 
-    def analyze_all(self, s_results, a_results, scan_results, u_results, r_results):
+    def analyze_all(self, s_results, a_results, scan_results, u_results, r_results, risk_results):
         report_data = []
 
         # 1. INFRAESTRUCTURA
@@ -33,7 +33,7 @@ class HealthCheckEvaluator:
             "recommendation": "Reducir administradores (Principio de Menor Privilegio)."
         })
 
-        # 3. REMEDIACION (Novedad v1.5)
+        # 3. REMEDIACION
         avg_days = r_results.get('avg_days_open', 0)
         overdue_c = r_results.get('overdue_criticals', 0)
         exploits = r_results.get('exploitable_total', 0)
@@ -46,27 +46,41 @@ class HealthCheckEvaluator:
             "check": "Eficacia de Parcheo y Analisis de Exploit",
             "status": status_rem,
             "details": f"Promedio dias: {avg_days}. Criticas vencidas: {overdue_c}. Con Exploit: {exploits}.",
-            "recommendation": "Priorizar vulnerabilidades con exploit activo y cerrar criticas fuera de SLA."
+            "recommendation": "Priorizar vulnerabilidades con exploit activo."
         })
 
-        # 4. LICENCIAMIENTO
+        # 4. PRIORIZACION (Novedad v1.6)
+        max_vpr = max([a['vpr'] for a in risk_results]) if risk_results else 0
+        status_risk = "OPTIMAL"
+        if max_vpr >= 7.0: status_risk = "WARNING"
+        if max_vpr >= 9.0: status_risk = "CRITICAL"
+
+        report_data.append({
+            "category": "PRIORIZACION",
+            "check": "Activos de Alto Riesgo (VPR)",
+            "status": status_risk,
+            "details": f"Puntaje VPR maximo: {max_vpr} en el Top 10.",
+            "recommendation": f"Enfocar recursos en el activo {risk_results[0]['name']} por alto riesgo de explotacion." if risk_results else "OK."
+        })
+
+        # 5. LICENCIAMIENTO
         stale = a_results.get('stats', {}).get('stale_assets', 0)
         report_data.append({
             "category": "LICENCIAMIENTO",
             "check": "Higiene de Activos (Stale)",
             "status": "OPTIMAL" if stale == 0 else "WARNING",
-            "details": f"Activos sin escaneo > 90 dias: {stale}.",
+            "details": f"Activos inactivos > 90 dias: {stale}.",
             "recommendation": "Configurar reglas de purga automatica."
         })
 
-        # 5. VISIBILIDAD
+        # 6. VISIBILIDAD
         failures = scan_results.get('stats', {}).get('auth_failures', 0)
         report_data.append({
             "category": "VISIBILIDAD",
             "check": "Calidad de Escaneo",
             "status": "OPTIMAL" if failures == 0 else "WARNING",
             "details": f"Fallos de autenticacion: {failures}.",
-            "recommendation": "Validar credenciales de escaneo en los activos afectados."
+            "recommendation": "Validar credenciales de escaneo."
         })
 
         return report_data
