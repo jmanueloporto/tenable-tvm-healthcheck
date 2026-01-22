@@ -1,18 +1,18 @@
 """
 Core Evaluator Module
-Version: 1.6.1
-Description: Motor de reglas incluyendo analisis de VPR con manejo de errores mejorado.
+Version: 1.7
+Description: Motor de reglas incluyendo analisis de cobertura de agentes.
 """
 
 class HealthCheckEvaluator:
     def __init__(self):
-        self.version = "1.6.1"
+        self.version = "1.7"
         self.STALE_THRESHOLD = 90
 
-    def analyze_all(self, s_results, a_results, scan_results, u_results, r_results, risk_results):
+    def analyze_all(self, s_results, a_results, scan_results, u_results, r_results, risk_results, cov_results):
         report_data = []
 
-        # 1. INFRAESTRUCTURA
+        # 1. INFRAESTRUCTURA (Scanners)
         s_stats = s_results.get('stats', {})
         report_data.append({
             "category": "INFRAESTRUCTURA",
@@ -40,55 +40,34 @@ class HealthCheckEvaluator:
         status_rem = "OPTIMAL"
         if avg_days > 30 or overdue_c > 0 or exploits > 0: status_rem = "WARNING"
         if avg_days > 60 or overdue_c > 10 or exploits > 5: status_rem = "CRITICAL"
+        report_data.append({"category": "REMEDIACION", "check": "Eficacia de Parcheo", "status": status_rem, "details": f"Promedio dias: {avg_days}. Vencidas: {overdue_c}.", "recommendation": "Priorizar remediacion."})
+
+        # 4. COBERTURA (Novedad v1.7)
+        total_ag = cov_results.get('total_agents', 0)
+        off_ag = cov_results.get('offline', 0)
+        status_cov = "OPTIMAL"
+        if total_ag > 0 and (off_ag / total_ag) > 0.10: status_cov = "WARNING"
+        if total_ag > 0 and (off_ag / total_ag) > 0.25: status_cov = "CRITICAL"
         
         report_data.append({
-            "category": "REMEDIACION",
-            "check": "Eficacia de Parcheo y Analisis de Exploit",
-            "status": status_rem,
-            "details": f"Promedio dias: {avg_days}. Criticas vencidas: {overdue_c}. Con Exploit: {exploits}.",
-            "recommendation": "Priorizar vulnerabilidades con exploit activo."
+            "category": "COBERTURA",
+            "check": "Salud de Agentes Nessus",
+            "status": status_cov,
+            "details": f"Total Agentes: {total_ag}. Offline: {off_ag}.",
+            "recommendation": "Revisar servicios de agentes en estaciones de trabajo." if off_ag > 0 else "OK."
         })
 
-        # 4. PRIORIZACION (V1.6.1)
-        # Verificamos si tenemos resultados reales para evitar falsos OPTIMAL
-        if not risk_results:
-            status_risk = "WARNING"
-            details_risk = "No se pudo calcular el riesgo (revisar logs)."
-            rec_risk = "Verificar conectividad con la API de Assets."
-        else:
-            max_vpr = risk_results[0]['vpr']
-            status_risk = "OPTIMAL"
-            if max_vpr >= 7.0: status_risk = "WARNING"
-            if max_vpr >= 9.0: status_risk = "CRITICAL"
-            details_risk = f"Puntaje VPR maximo: {max_vpr}."
-            rec_risk = f"Enfocar recursos en {risk_results[0]['name']}." if status_risk != "OPTIMAL" else "OK."
+        # 5. PRIORIZACION
+        max_vpr = risk_results[0]['vpr'] if risk_results else 0
+        status_risk = "OPTIMAL"
+        if max_vpr >= 7.0: status_risk = "WARNING"
+        if max_vpr >= 9.0: status_risk = "CRITICAL"
+        report_data.append({"category": "PRIORIZACION", "check": "Riesgo VPR", "status": status_risk, "details": f"VPR Max: {max_vpr}.", "recommendation": "OK."})
 
-        report_data.append({
-            "category": "PRIORIZACION",
-            "check": "Activos de Alto Riesgo (VPR)",
-            "status": status_risk,
-            "details": details_risk,
-            "recommendation": rec_risk
-        })
-
-        # 5. LICENCIAMIENTO
+        # 6. LICENCIAMIENTO & 7. VISIBILIDAD (Se mantienen igual)
         stale = a_results.get('stats', {}).get('stale_assets', 0)
-        report_data.append({
-            "category": "LICENCIAMIENTO",
-            "check": "Higiene de Activos (Stale)",
-            "status": "OPTIMAL" if stale == 0 else "WARNING",
-            "details": f"Activos inactivos > 90 dias: {stale}.",
-            "recommendation": "Configurar reglas de purga automatica."
-        })
-
-        # 6. VISIBILIDAD
+        report_data.append({"category": "LICENCIAMIENTO", "check": "Higiene", "status": "OPTIMAL" if stale == 0 else "WARNING", "details": f"Stale: {stale}.", "recommendation": "Purga auto."})
         failures = scan_results.get('stats', {}).get('auth_failures', 0)
-        report_data.append({
-            "category": "VISIBILIDAD",
-            "check": "Calidad de Escaneo",
-            "status": "OPTIMAL" if failures == 0 else "WARNING",
-            "details": f"Fallos de autenticacion: {failures}.",
-            "recommendation": "Validar credenciales de escaneo."
-        })
+        report_data.append({"category": "VISIBILIDAD", "check": "Calidad", "status": "OPTIMAL" if failures == 0 else "WARNING", "details": f"Fallos: {failures}.", "recommendation": "Credenciales."})
 
         return report_data
