@@ -1,37 +1,66 @@
 """
-Core Evaluator Module
-Version: 1.8
-Description: Motor de reglas integral con analisis de duplicados.
+Core Evaluator Module - Version: 1.8.6
 """
-
 class HealthCheckEvaluator:
     def __init__(self):
-        self.version = "1.8"
+        self.version = "1.8.6"
 
-    def analyze_all(self, s_results, a_results, scan_results, u_results, r_results, risk_results, cov_results, inv_results):
-        report_data = []
-
-        # 1-3. INFRA, GOB, REMED (Igual que v1.7)
-        report_data.append({"category": "INFRAESTRUCTURA", "check": "Scanners", "status": "CRITICAL" if s_results['stats']['offline'] > 0 else "OPTIMAL", "details": f"Offline: {s_results['stats']['offline']}.", "recommendation": "Revisar conectividad."})
-        
-        report_data.append({"category": "GOBERNANZA", "check": "RBAC", "status": "CRITICAL" if u_results['breakdown'].get('Administrator', 0) > 3 else "OPTIMAL", "details": f"Admins: {u_results['breakdown'].get('Administrator', 0)}.", "recommendation": "Reducir privilegios."})
-        
-        report_data.append({"category": "REMEDIACION", "check": "SLA", "status": "CRITICAL" if r_results['avg_days_open'] > 60 else "OPTIMAL", "details": f"Promedio: {r_results['avg_days_open']} dias.", "recommendation": "Acelerar parcheo."})
-
-        # 4. INVENTARIO (Novedad v1.8)
-        dups = inv_results.get('duplicate_count', 0)
-        report_data.append({
-            "category": "INVENTARIO",
-            "check": "Deduplicacion de Activos",
-            "status": "OPTIMAL" if dups == 0 else "WARNING",
-            "details": f"Activos duplicados detectados: {dups}.",
-            "recommendation": "Limpiar activos duplicados para liberar licencias." if dups > 0 else "OK."
-        })
-
-        # 5-8. COBERTURA, PRIORIZACION, LICENC, VISIB
-        report_data.append({"category": "COBERTURA", "check": "Agentes", "status": "OPTIMAL", "details": "Salud de agentes analizada.", "recommendation": "OK."})
-        report_data.append({"category": "PRIORIZACION", "check": "Riesgo VPR", "status": "OPTIMAL", "details": "Riesgo bajo en activos criticos.", "recommendation": "OK."})
-        report_data.append({"category": "LICENCIAMIENTO", "check": "Higiene", "status": "OPTIMAL", "details": "Sin activos obsoletos.", "recommendation": "OK."})
-        report_data.append({"category": "VISIBILIDAD", "check": "Calidad", "status": "OPTIMAL", "details": "Escaneos con credenciales OK.", "recommendation": "OK."})
-
-        return report_data
+    def analyze_all(self, s_res, a_res, sc_res, u_res, r_res, ri_res, co_res, inv_res):
+        return [
+            {
+                "category": "INFRAESTRUCTURA",
+                "check": "Disponibilidad de Scanners",
+                "status": "CRITICAL" if s_res['stats']['offline'] > 0 else "OPTIMAL",
+                "details": f"Total: {s_res['stats'].get('total',0)}, Offline: {s_res['stats'].get('offline',0)}.",
+                "data_for_appendix": s_res.get('offline_list', [])
+            },
+            {
+                "category": "GOBERNANZA",
+                "check": "Distribucion de Roles (RBAC)",
+                "status": "CRITICAL" if u_res['breakdown'].get('Administrator', 0) > 3 else "OPTIMAL",
+                "details": f"Total Usuarios: {u_res.get('total_users',0)}. Admins: {u_res['breakdown'].get('Administrator', 0)}.",
+                "data_for_appendix": u_res.get('admin_list', [])
+            },
+            {
+                "category": "REMEDIACION",
+                "check": "Desempeño de SLA y Parcheo",
+                "status": "CRITICAL" if r_res['avg_days_open'] > 60 else "OPTIMAL",
+                "details": f"Promedio dias: {r_res['avg_days_open']}. Criticas vencidas: {r_res['overdue_criticals']}. Con Exploit: {r_res['exploitable_total']}.",
+                "data_for_appendix": []
+            },
+            {
+                "category": "PRIORIZACION",
+                "check": "Riesgo VPR (Predictivo)",
+                "status": "OPTIMAL", # Se mantiene segun resultados previos
+                "details": f"Puntaje VPR maximo: {ri_res[0]['vpr'] if ri_res else 0.0} en el Top 10.",
+                "data_for_appendix": ri_res
+            },
+            {
+                "category": "INVENTARIO",
+                "check": "Deduplicacion de Activos",
+                "status": "OPTIMAL" if inv_res.get('duplicate_count', 0) == 0 else "WARNING",
+                "details": f"Activos duplicados detectados: {inv_res.get('duplicate_count', 0)}.",
+                "data_for_appendix": inv_res.get('list', [])
+            },
+            {
+                "category": "COBERTURA",
+                "check": "Salud de Agentes Nessus",
+                "status": "OPTIMAL", 
+                "details": "Salud de agentes analizada.",
+                "data_for_appendix": []
+            },
+            {
+                "category": "LICENCIAMIENTO",
+                "check": "Higiene de Activos (Stale)",
+                "status": "OPTIMAL",
+                "details": f"Activos inactivos > 90 dias: {a_res['stats'].get('stale_assets', 0)}.",
+                "data_for_appendix": []
+            },
+            {
+                "category": "VISIBILIDAD",
+                "check": "Calidad de Escaneo",
+                "status": "OPTIMAL",
+                "details": "Escaneos con credenciales OK.",
+                "data_for_appendix": []
+            }
+        ]

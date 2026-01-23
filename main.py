@@ -1,7 +1,5 @@
 """
-Tenable TVM Health Check Suite
-Version: 1.8
-Description: Orquestador final con 8 pasos de auditoria.
+Tenable TVM Health Check Suite - Version: 1.8.6
 """
 import sys
 from core.connection import TenableConnection
@@ -16,16 +14,17 @@ from modules.coverage import CoverageModule
 from modules.inventory import InventoryModule
 from reports.generator import ReportGenerator
 
-__version__ = "1.8"
+__version__ = "1.8.6"
 
 def run_health_check():
     print("\n" + "="*75)
-    print(f"      TENABLE TVM HEALTH CHECK - FULL SUITE v{__version__}")
+    print(f"      TENABLE TVM HEALTH CHECK - MASTER SUITE v{__version__}")
     print("="*75)
     try:
-        tio = TenableConnection().get_client()
-        print(f"[*] Iniciando Auditoria Final v{__version__}...")
+        api_manager = TenableConnection()
+        tio = api_manager.get_client()
 
+        print(f"[*] Iniciando Auditoria Profesional v{__version__}...")
         s_res = ScannerHealthModule(tio).run_assessment()
         a_res = AssetHealthModule(tio).run_hygiene_check()
         sc_res = ScanHealthModule(tio).audit_credentials_health()
@@ -38,15 +37,17 @@ def run_health_check():
         evaluator = HealthCheckEvaluator()
         final_assessment = evaluator.analyze_all(s_res, a_res, sc_res, u_res, r_res, ri_res, co_res, inv_res)
 
-        ReportGenerator().save_json_report({"results": final_assessment, "version": __version__})
-        ReportGenerator().save_txt_summary(final_assessment)
+        reporter = ReportGenerator()
+        reporter.save_json_report({"results": final_assessment, "version": __version__})
+        reporter.save_txt_summary(final_assessment)
 
-        print("\n" + "-"*33 + " RESULTADOS " + "-"*33)
+        print("\n" + "-"*33 + " RESUMEN " + "-"*33)
         for item in final_assessment:
-            print(f" [{item['status']:<10}] | {item['category']}: {item['check']}")
+            print(f" [{item['status']:<10}] | {item['category']}")
         print("\n" + "="*75 + "\n")
 
     except Exception as e:
-        print(f"\n[!] ERROR: {e}"); sys.exit(1)
+        print(f"\n[!] ERROR CRITICO: {e}"); sys.exit(1)
 
-if __name__ == "__main__": run_health_check()
+if __name__ == "__main__":
+    run_health_check()
