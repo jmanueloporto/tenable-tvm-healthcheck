@@ -1,9 +1,9 @@
 """
-Core Evaluator Module - Version: 1.8.7
+Core Evaluator Module - Version: 1.8.8
 """
 class HealthCheckEvaluator:
     def __init__(self):
-        self.version = "1.8.7"
+        self.version = "1.8.8"
 
     def analyze_all(self, s_res, a_res, sc_res, u_res, r_res, ri_res, co_res, inv_res):
         return [
@@ -23,10 +23,10 @@ class HealthCheckEvaluator:
             },
             {
                 "category": "REMEDIACION",
-                "check": "Desempeño de SLA y Parcheo",
+                "check": "SLA y Deuda Tecnica",
                 "status": "CRITICAL" if r_res['avg_days_open'] > 60 else "OPTIMAL",
-                "details": f"Promedio dias: {r_res['avg_days_open']}. Criticas vencidas: {r_res['overdue_criticals']}.",
-                "data_for_appendix": []
+                "details": f"Promedio: {r_res['avg_days_open']} dias. Criticas vencidas: {r_res['overdue_criticals']}.",
+                "data_for_appendix": r_res.get('oldest_vulns', [])
             },
             {
                 "category": "PRIORIZACION",

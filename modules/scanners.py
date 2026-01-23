@@ -1,6 +1,8 @@
 """
-Scanner Health Module - Version: 1.8.7
+Scanner Health Module - Version: 1.8.8
 """
+import re
+
 class ScannerHealthModule:
     def __init__(self, tio_client):
         self.tio = tio_client
@@ -11,14 +13,24 @@ class ScannerHealthModule:
         total = 0
         offline_count = 0
 
+        # Patrón para detectar UUIDs largos (nombres técnicos de sistema)
+        uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
         for s in scanners:
             total += 1
             status = str(s.get('status', 'off')).lower()
-            name = s.get('name', 'Unknown Scanner')
+            raw_name = s.get('name', 'Unknown')
+            scanner_type = s.get('type', 'N/A')
             
+            # Si el nombre es un UUID, lo reemplazamos por una etiqueta legible
+            if re.search(uuid_pattern, raw_name):
+                name = f"ID-ASSET ({scanner_type.upper()})"
+            else:
+                name = raw_name
+
             if status not in ['on-line', 'on']:
                 offline_count += 1
-                offline_list.append(f"NOMBRE: {name:<35} | ESTADO: {status.upper()}")
+                offline_list.append(f"RECURSO: {name:<35} | TIPO: {scanner_type:<12} | ESTADO: {status.upper()}")
 
         return {
             "stats": {"total": total, "offline": offline_count},

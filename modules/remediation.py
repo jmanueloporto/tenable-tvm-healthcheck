@@ -1,42 +1,41 @@
 """
-Remediation & SLA Module
-Version: 1.5
-Description: Calculo de tiempos de respuesta y detección de exploits.
+Remediation Module - Version: 1.8.8
 """
-from datetime import datetime, timezone
+from datetime import datetime
 
 class RemediationModule:
     def __init__(self, tio_client):
-        self.version = "1.5"
         self.tio = tio_client
 
     def calculate_sla_performance(self):
-        stats = {"avg_days_open": 0, "overdue_criticals": 0, "overdue_highs": 0, "exploitable_total": 0, "total_analyzed": 0}
+        stats = {"avg_days_open": 0, "overdue_criticals": 0, "oldest_vulns": []}
         try:
             vulns = self.tio.exports.vulns(severity=['critical', 'high'], state=['open'])
-            count = 0
-            total_days = 0
-            now = datetime.now(timezone.utc)
+            
+            all_vulns = []
+            now = datetime.now()
 
             for v in vulns:
-                count += 1
                 first_found = v.get('first_found')
-                severity = v.get('severity')
-                has_exploit = v.get('has_exploit', False)
-                
                 if first_found:
-                    found_date = datetime.fromisoformat(first_found.replace('Z', '+00:00'))
-                    days_open = (now - found_date).days
-                    total_days += days_open
-                    if severity == 'critical' and days_open > 14: stats["overdue_criticals"] += 1
-                    elif severity == 'high' and days_open > 30: stats["overdue_highs"] += 1
-                
-                if has_exploit: stats["exploitable_total"] += 1
-                if count >= 1000: break 
+                    dt = datetime.strptime(first_found.split('T')[0], '%Y-%m-%d')
+                    days = (now - dt).days
+                    
+                    vuln_data = {
+                        "plugin_name": v.get('plugin_name', 'N/A'),
+                        "days_open": days,
+                        "severity": v.get('severity')
+                    }
+                    all_vulns.append(vuln_data)
+                    
+                    if days > 30 and v.get('severity') == 'critical':
+                        stats["overdue_criticals"] += 1
 
-            if count > 0:
-                stats["avg_days_open"] = round(total_days / count)
-                stats["total_analyzed"] = count
+            if all_vulns:
+                stats["avg_days_open"] = int(sum(v['days_open'] for v in all_vulns) / len(all_vulns))
+                # Ordenar por antigüedad y tomar las 5 peores
+                stats["oldest_vulns"] = sorted(all_vulns, key=lambda x: x['days_open'], reverse=True)[:5]
+            
             return stats
         except Exception as e:
-            return {"error": str(e), "avg_days_open": 0, "overdue_criticals": 0}
+            return stats
