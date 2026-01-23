@@ -1,11 +1,12 @@
 """
-Core Evaluator Module - Version: 1.8.8
+Core Evaluator Module - Version: 1.8.9
 """
 class HealthCheckEvaluator:
     def __init__(self):
-        self.version = "1.8.8"
+        self.version = "1.8.9"
 
     def analyze_all(self, s_res, a_res, sc_res, u_res, r_res, ri_res, co_res, inv_res):
+        # Aseguramos que todas las categorías necesarias estén presentes para el mapeo del generador
         return [
             {
                 "category": "INFRAESTRUCTURA",

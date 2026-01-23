@@ -16,13 +16,16 @@ class RemediationModule:
             now = datetime.now()
 
             for v in vulns:
+                # Captura robusta del nombre de la vulnerabilidad
+                p_name = v.get('plugin_name') or v.get('plugin', {}).get('name') or "Vuln ID: " + str(v.get('plugin_id'))
+                
                 first_found = v.get('first_found')
                 if first_found:
                     dt = datetime.strptime(first_found.split('T')[0], '%Y-%m-%d')
                     days = (now - dt).days
                     
                     vuln_data = {
-                        "plugin_name": v.get('plugin_name', 'N/A'),
+                        "plugin_name": p_name,
                         "days_open": days,
                         "severity": v.get('severity')
                     }
@@ -33,7 +36,7 @@ class RemediationModule:
 
             if all_vulns:
                 stats["avg_days_open"] = int(sum(v['days_open'] for v in all_vulns) / len(all_vulns))
-                # Ordenar por antigüedad y tomar las 5 peores
+                # Top 5 de deuda técnica (más antiguas)
                 stats["oldest_vulns"] = sorted(all_vulns, key=lambda x: x['days_open'], reverse=True)[:5]
             
             return stats

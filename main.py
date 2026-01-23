@@ -1,5 +1,5 @@
 """
-Tenable TVM Health Check Suite - Version: 1.8.8
+Tenable TVM Health Check Suite - Version: 1.8.9
 """
 import sys
 from core.connection import TenableConnection
@@ -14,7 +14,7 @@ from modules.coverage import CoverageModule
 from modules.inventory import InventoryModule
 from reports.generator import ReportGenerator
 
-__version__ = "1.8.8"
+__version__ = "1.8.9"
 
 def run_health_check():
     print("\n" + "="*75)
@@ -25,13 +25,29 @@ def run_health_check():
         tio = api_manager.get_client()
 
         print(f"[*] Iniciando Auditoria Profesional v{__version__}...")
+        
+        print("[*] 1/8 Analizando Infraestructura de Scanners...")
         s_res = ScannerHealthModule(tio).run_assessment()
+        
+        print("[*] 2/8 Analizando Higiene de Activos...")
         a_res = AssetHealthModule(tio).run_hygiene_check()
+        
+        print("[*] 3/8 Auditando Calidad de Escaneo...")
         sc_res = ScanHealthModule(tio).audit_credentials_health()
+        
+        print("[*] 4/8 Evaluando Gobernanza (RBAC)...")
         u_res = GovernanceModule(tio).get_user_roles_stats()
+        
+        print("[*] 5/8 Calculando SLA y Deuda Tecnica (Remediacion)...")
         r_res = RemediationModule(tio).calculate_sla_performance()
+        
+        print("[*] 6/8 Identificando Riesgo Predictivo (VPR)...")
         ri_res = RiskModule(tio).get_top_risk_assets()
+        
+        print("[*] 7/8 Analizando Cobertura de Agentes Nessus...")
         co_res = CoverageModule(tio).analyze_agent_health()
+        
+        print("[*] 8/8 Buscando Duplicados en Inventario...")
         inv_res = InventoryModule(tio).find_duplicates()
 
         evaluator = HealthCheckEvaluator()

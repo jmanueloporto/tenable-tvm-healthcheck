@@ -12,8 +12,6 @@ class ScannerHealthModule:
         offline_list = []
         total = 0
         offline_count = 0
-
-        # Patrón para detectar UUIDs largos (nombres técnicos de sistema)
         uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 
         for s in scanners:
@@ -22,11 +20,7 @@ class ScannerHealthModule:
             raw_name = s.get('name', 'Unknown')
             scanner_type = s.get('type', 'N/A')
             
-            # Si el nombre es un UUID, lo reemplazamos por una etiqueta legible
-            if re.search(uuid_pattern, raw_name):
-                name = f"ID-ASSET ({scanner_type.upper()})"
-            else:
-                name = raw_name
+            name = f"ID-ASSET ({scanner_type.upper()})" if re.search(uuid_pattern, raw_name) else raw_name
 
             if status not in ['on-line', 'on']:
                 offline_count += 1
