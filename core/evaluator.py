@@ -1,12 +1,11 @@
 """
-Core Evaluator Module - Version: 1.8.9
+Core Evaluator Module - Version: 1.9.0
 """
 class HealthCheckEvaluator:
     def __init__(self):
-        self.version = "1.8.9"
+        self.version = "1.9.0"
 
     def analyze_all(self, s_res, a_res, sc_res, u_res, r_res, ri_res, co_res, inv_res):
-        # Aseguramos que todas las categorías necesarias estén presentes para el mapeo del generador
         return [
             {
                 "category": "INFRAESTRUCTURA",
@@ -23,24 +22,24 @@ class HealthCheckEvaluator:
                 "data_for_appendix": u_res.get('admin_list', [])
             },
             {
-                "category": "REMEDIACION",
-                "check": "SLA y Deuda Tecnica",
-                "status": "CRITICAL" if r_res['avg_days_open'] > 60 else "OPTIMAL",
-                "details": f"Promedio: {r_res['avg_days_open']} dias. Criticas vencidas: {r_res['overdue_criticals']}.",
-                "data_for_appendix": r_res.get('oldest_vulns', [])
-            },
-            {
                 "category": "PRIORIZACION",
-                "check": "Riesgo VPR (Predictivo)",
-                "status": "OPTIMAL",
-                "details": f"Puntaje VPR maximo: {ri_res[0]['vpr'] if ri_res else 0.0} en el Top 10.",
+                "check": "Riesgo Predictivo (VPR Intelligence)",
+                "status": "CRITICAL" if any(x.get('vpr', 0) > 8.0 for x in ri_res) else "OPTIMAL",
+                "details": f"Hallazgos VPR criticos analizados: {len(ri_res)}.",
                 "data_for_appendix": ri_res
             },
             {
                 "category": "INVENTARIO",
                 "check": "Higiene y Licenciamiento",
-                "status": "OPTIMAL",
-                "details": f"Duplicados: {inv_res.get('duplicate_count', 0)}. Stale: {a_res['stats'].get('stale_assets', 0)}.",
+                "status": "OPTIMAL" if inv_res.get('duplicate_count', 0) == 0 else "WARNING",
+                "details": f"Duplicados: {inv_res.get('duplicate_count', 0)}. Stale (>90d): {a_res['stats'].get('stale_assets', 0)}.",
                 "data_for_appendix": inv_res.get('list', [])
+            },
+            {
+                "category": "REMEDIACION",
+                "check": "SLA y Deuda Tecnica",
+                "status": "CRITICAL" if r_res['avg_days_open'] > 60 else "OPTIMAL",
+                "details": f"Promedio: {r_res['avg_days_open']} dias. Criticas vencidas: {r_res['overdue_criticals']}.",
+                "data_for_appendix": r_res.get('oldest_vulns', [])
             }
         ]
