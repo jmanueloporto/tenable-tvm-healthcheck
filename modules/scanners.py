@@ -1,5 +1,5 @@
 """
-Scanner Health Module - Version: 1.8.6
+Scanner Health Module - Version: 1.8.7
 """
 class ScannerHealthModule:
     def __init__(self, tio_client):
@@ -9,15 +9,18 @@ class ScannerHealthModule:
         scanners = self.tio.scanners.list()
         offline_list = []
         total = 0
-        offline = 0
+        offline_count = 0
 
         for s in scanners:
             total += 1
-            if s.get('status') != 'on-line':
-                offline += 1
-                offline_list.append(f"NOMBRE: {s.get('name'):<25} | IP: {s.get('ip', 'N/A'):<15} | ESTADO: {s.get('status')}")
+            status = str(s.get('status', 'off')).lower()
+            name = s.get('name', 'Unknown Scanner')
+            
+            if status not in ['on-line', 'on']:
+                offline_count += 1
+                offline_list.append(f"NOMBRE: {name:<35} | ESTADO: {status.upper()}")
 
         return {
-            "stats": {"total": total, "offline": offline},
+            "stats": {"total": total, "offline": offline_count},
             "offline_list": sorted(offline_list)
         }

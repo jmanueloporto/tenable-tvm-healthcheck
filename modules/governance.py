@@ -1,5 +1,5 @@
 """
-Governance Module - Version: 1.8.6
+Governance Module - Version: 1.8.7
 """
 class GovernanceModule:
     def __init__(self, tio_client):
@@ -11,10 +11,10 @@ class GovernanceModule:
         breakdown = {"Administrator": 0}
         
         for u in users:
-            role = u.get('role_name')
-            if role == 'Administrator':
+            role = str(u.get('role_name', '')).lower()
+            if 'admin' in role:
                 breakdown["Administrator"] += 1
-                admin_list.append(f"USUARIO: {u.get('username'):<20} | EMAIL: {u.get('email')}")
+                admin_list.append(f"USUARIO: {u.get('username'):<25} | ROL: {role.upper()}")
             
         return {
             "total_users": len(users),
