@@ -1,9 +1,30 @@
+# === Suite de Auditoria Tenable TVM ===
+
+# 1. Reportes y Datos (Ignora los reportes generados, pero NO el codigo)
+reports/*.txt
+reports/*.json
+reports/*.csv
+
+# 2. Entorno Virtual (Venv)
 tenable/
+bin/
+include/
+lib/
+lib64/
+share/
+pyvenv.cfg
+
+# 3. Cache de Python
 __pycache__/
+*.py[cod]
+*$py.class
+
+# 4. Credenciales y Configuracion Sensible
 .env
-*.log
-reports/
-.env
-tenable/
-reports/
-__pycache__/
+config.ini
+secrets.py
+credentials.json
+
+# 5. Sistema Operativo
+.DS_Store
+Thumbs.db
