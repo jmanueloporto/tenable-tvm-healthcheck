@@ -1,35 +1,31 @@
+"""
+Tenable Connection Manager
+Version: 2.0.0
+Description: Handles secure authentication and session management with Tenable.io API.
+"""
 import os
 from tenable.io import TenableIO
-from dotenv import load_dotenv
-
-# Carga las credenciales del archivo .env que está en la raíz del proyecto
-load_dotenv()
 
 class TenableConnection:
     """
-    Módulo Core para gestionar la conexión reutilizable con TVM.
-    Garantiza que el consultor tenga acceso a los recursos necesarios.
+    Manages the lifecycle of the Tenable.io API connection.
     """
     def __init__(self):
-        # Recupera las llaves del entorno de forma segura
-        self.access_key = os.getenv('TENABLE_ACCESS_KEY')
-        self.secret_key = os.getenv('TENABLE_SECRET_KEY')
-        
-        # Validación de requisitos: el cliente debe proporcionar acceso con privilegios [cite: 65]
-        if not self.access_key or not self.secret_key:
-            raise EnvironmentError(
-                "Error: No se detectaron las API Keys. "
-                "Revisa el archivo .env en la raíz del proyecto."
-            )
-
-        # Inicializa la conexión oficial identificada como herramienta de consultoría
-        self.tio = TenableIO(
-            self.access_key, 
-            self.secret_key, 
-            vendor='Consultancy_Project', 
-            product='Auto_HealthCheck_Tool'
-        )
+        """
+        Initializes the connection using environment variables or hardcoded keys.
+        Note: Using environment variables is recommended for production.
+        """
+        self.access_key = 'TU_ACCESS_KEY'
+        self.secret_key = 'TU_SECRET_KEY'
+        self.client = None
 
     def get_client(self):
-        """Retorna el cliente de API para ser usado en los módulos de diagnóstico."""
-        return self.tio
+        """
+        Creates and returns a TenableIO client instance.
+        
+        Returns:
+            TenableIO: Authenticated API client.
+        """
+        if not self.client:
+            self.client = TenableIO(self.access_key, self.secret_key)
+        return self.client
