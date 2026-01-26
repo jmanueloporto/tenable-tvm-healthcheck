@@ -1,42 +1,40 @@
-from datetime import datetime, timezone
+"""
+Asset Hygiene Module
+Version: 2.0.0
+Description: Evaluates the health and status of assets in the Tenable workbench.
+"""
+from datetime import datetime, timedelta
 
 class AssetHealthModule:
     """
-    Evalúa la higiene del inventario de activos y el impacto en licenciamiento.
-    Alineado con la revisión de almacenamiento y configuración.
+    Analyzes asset data to identify stale or unlicensed records.
     """
     def __init__(self, tio_client):
         self.tio = tio_client
 
-    def run_hygiene_check(self, stale_days=90):
+    def run_hygiene_check(self):
         """
-        Identifica activos 'stale' (no vistos recientemente).
+        Identifies 'stale' assets that haven't been seen in the last 90 days.
+        
+        Returns:
+            dict: Statistics about asset hygiene.
         """
         assets = self.tio.assets.list()
-        now = datetime.now(timezone.utc)
-        
-        findings = {
-            "stats": {"total_assets": 0, "stale_assets": 0},
-            "stale_list": []
-        }
+        stale_threshold = datetime.now() - timedelta(days=90)
+        stale_count = 0
+        total_assets = 0
 
         for asset in assets:
-            findings["stats"]["total_assets"] += 1
-            
-            # Obtener la última vez que se vio el activo
-            last_seen_str = asset.get('updated_at')
+            total_assets += 1
+            last_seen_str = asset.get('last_seen')
             if last_seen_str:
-                # pyTenable suele devolver objetos datetime o strings ISO
-                # Calculamos la antigüedad
-                last_seen = datetime.fromisoformat(last_seen_str.replace('Z', '+00:00'))
-                delta = (now - last_seen).days
-                
-                if delta > stale_days:
-                    findings["stats"]["stale_assets"] += 1
-                    findings["stale_list"].append({
-                        "id": asset.get('id'),
-                        "name": asset.get('name') or asset.get('ipv4', ['N/A'])[0],
-                        "days_inactive": delta
-                    })
+                last_seen = datetime.strptime(last_seen_str.split('T')[0], '%Y-%m-%d')
+                if last_seen < stale_threshold:
+                    stale_count += 1
 
-        return findings
+        return {
+            "stats": {
+                "total_assets": total_assets,
+                "stale_assets": stale_count
+            }
+        }

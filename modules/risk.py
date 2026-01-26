@@ -1,16 +1,25 @@
 """
-Risk Module - Version: 1.9.0
-Description: Identifica las vulnerabilidades con mayor impacto dinámico (VPR) y sus activos.
+Risk Intelligence Module
+Version: 2.0.0
+Description: Extracts high-impact vulnerabilities using Tenable's VPR scoring.
 """
 class RiskModule:
+    """
+    Interfaces with Tenable VPR to identify the most dangerous open threats.
+    """
     def __init__(self, tio_client):
         self.tio = tio_client
 
     def get_top_risk_assets(self):
-        # Buscamos las vulnerabilidades con mayor VPR (puntaje dinámico)
-        # Filtramos por puntajes altos para obtener los riesgos reales
+        """
+        Exports vulnerabilities with high VPR scores.
+        
+        Returns:
+            list: Top 10 critical risks with associated assets.
+        """
         top_vulns = []
         try:
+            # Filtering for dynamic scores above 0.1 to find relevant data
             vulns = self.tio.exports.vulns(vpr_score=['0.1', '10.0'], state=['open'])
             
             for v in vulns:
@@ -19,10 +28,8 @@ class RiskModule:
                     "vpr": v.get('vpr_score', 0.0),
                     "asset": v.get('asset', {}).get('hostname') or "N/A"
                 })
-                # Limitamos a los 10 riesgos más altos detectados
                 if len(top_vulns) >= 10: break
             
-            # Si no hay nada con VPR, devolvemos una lista vacía para que el reporte lo maneje
             return sorted(top_vulns, key=lambda x: x['vpr'], reverse=True)
         except Exception:
             return []

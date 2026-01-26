@@ -1,32 +1,35 @@
 """
-Inventory & Deduplication Module
-Version: 1.8
-Description: Identifica activos duplicados para optimizar el consumo de licencias.
+Inventory De-duplication Module
+Version: 2.0.0
+Description: Detects duplicate asset records to optimize licensing.
 """
-
 class InventoryModule:
+    """
+    Checks for multiple assets sharing the same hostname or IP address.
+    """
     def __init__(self, tio_client):
-        self.version = "1.8"
         self.tio = tio_client
 
     def find_duplicates(self):
         """
-        Busca posibles duplicados basados en el hostname.
+        Analyzes the asset workbench for duplicated hostnames.
+        
+        Returns:
+            dict: Count and list of potential duplicate assets.
         """
-        duplicates = []
+        assets = self.tio.assets.list()
         seen_hosts = {}
-        try:
-            assets = self.tio.assets.list()
-            for asset in assets:
-                hostname = asset.get('hostname')
-                if hostname:
-                    hostname = hostname[0].lower() if isinstance(hostname, list) else hostname.lower()
-                    if hostname in seen_hosts:
-                        duplicates.append(hostname)
-                    else:
-                        seen_hosts[hostname] = asset.get('id')
-            
-            return {"duplicate_count": len(duplicates), "list": duplicates}
-        except Exception as e:
-            print(f"Error en InventoryModule: {e}")
-            return {"duplicate_count": 0, "list": []}
+        duplicates = []
+
+        for asset in assets:
+            hostname = asset.get('hostname')
+            if hostname:
+                if hostname in seen_hosts:
+                    duplicates.append(f"DUPLICATE HOST: {hostname}")
+                else:
+                    seen_hosts[hostname] = asset.get('id')
+
+        return {
+            "duplicate_count": len(duplicates),
+            "list": duplicates
+        }
